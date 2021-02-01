@@ -1,0 +1,90 @@
+#include "../../rt.h"
+#include <stdlib.h>
+
+
+//Counting Semaphore
+CSemaphore PC("PassengerCounter", 0, 4);
+
+//2 Conditions
+CCondition GoInElevator1("GoInElevator1");
+CCondition GoInElevator2("GoInElevator2");
+
+//Pipeline
+CTypedPipe <char> TypedPipe2("TypedPipe2", 1024);
+
+//Mutex 
+CMutex P2M("Pipe2Mutex");
+
+class Passenger : public ActiveClass {
+	// constructors, member functions and data etc go here. Note data is sharable (with caution) amongst all class threads.
+	//child threads
+
+private:
+	//data
+	//1-8
+	int current_floor;
+	int destination_floor;
+
+
+public:
+	//constructor and destructor
+	int direction_select = rand() % 2;
+	int floor_select = rand() % 10;
+	char buffer[33];
+	
+
+	string PassengerRequest = { '\0','\0' };
+	string PassengerDirection = { 'u','d' };
+	//select u or d
+	PassengerRequest[0] = PassengerDirection[direction_select];
+
+	//select 0-9 and change it to a char
+	PassengerRequest[1] = '0' + floor_select;
+
+	Passenger(int _MyNumber) { 
+		
+		
+		int MyNumber = _MyNumber; 
+	}
+	void  ConditionPoll(void* ThreadArgs) {
+		
+		//poll up/down condition for both EVs for current floor
+		while (1) {
+			
+			
+
+		}
+	}
+
+	//EV arrives at current_floor
+	//EV opens doors
+	//EV signals to allow passengers to get on or off
+	//Passengers getting on then enter a destination floor
+	//EV closes door and resets condition
+
+	int   WritePassRequests(void* ThreadArgs) {
+		P2M.Wait();
+		TypedPipe2.Write(&PassengerRequest[0]);
+		TypedPipe2.Write(&PassengerRequest[1]);
+		P2M.Signal();
+	}
+
+
+
+	//main threads 
+	int   main(void) {
+		Passenger pass1;		// create the active object in suspended state
+		pass1.Resume();			// let object run it’s main(), which then creates 2 other threads
+
+		ClassThread <Passenger>   Thread1(this, &Passenger::ConditionPoll, ACTIVE, NULL);
+		ClassThread <Passenger>   Thread2(this, &Passenger::WritePassRequests, ACTIVE, NULL);
+
+		// wait for the above two child threads of the class to terminate
+		Thread1.WaitForThread();
+		Thread2.WaitForThread();
+		pass1.WaitForThread();
+
+		return 0;
+	};
+};
+
